@@ -1,0 +1,149 @@
+---
+title: "p8105_hw3_yl4610"
+output: github_document
+author: "Yuxin Liu"
+date: "2022-10-08"
+---
+
+```{r, message=FALSE}
+library(tidyverse)
+library(p8105.datasets)
+```
+# question 1 
+```{r}
+data("instacart") 
+janitor::clean_names(instacart)
+```
+
+I loaded the libraries and data from the p8105.datasets. Then I used janitor to clean the names. This dataset contains variables such as `r names(instacart)`. It contains `r ncol(instacart)` columns and `r nrow(instacart)` rows. 
+
+```{r}
+instacart %>%
+  group_by(aisle) %>%
+  summarize(n_obs = n())%>%
+  arrange(desc(n_obs)) %>%
+  filter(n_obs > 10000) %>% 
+  ggplot(aes(x=aisle, y = n_obs)) + geom_point() 
+```
+There are 134 aisles and fresh vegetables are the most items ordered from.
+I used group_by and summarize to look at the number of aisles and then used arrange to arrange the number from largest to smallest. I used filter to limit number of items to aisles with more than 10000 items ordered by. I used ggplot to make a scatterplot to show the number of items ordered in each aisle.
+  
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+# question 2
+```{r}
+accel_data = read_csv( "./dataset/accel_data.csv") %>%
+janitor::clean_names() %>% 
+mutate (
+  weekday_vs_weekend = ifelse(day %in% c("Saturday", "Sunday"), 0, 1),
+  weekday_vs_weekend = as.factor (weekday_vs_weekend)
+  ) %>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "activity",
+    names_prefix = "activity_", 
+    values_to = "activity_counts") 
+accel_data 
+```
+I used read_csv to read dataset and used janitor to clean the names of data. Then I used mutate to create the new variable weekday_vs_weekend by using ifelse. If day equals to Saturday or Sunday, weekday_vs_weekend equals to 0; If day equals to weekdays, weekday_vs_weekend equals to 1. Then I used mutate to convert them to factors. I used pivot_longer to pivot the categories of activities into one column and pivot corresponding values to activity_counts. I also used names_to to dropped the prefix activity_ to make it cleaner.
+
+This dataset contains variables such as `r names(accel_data)`. It contains `r ncol(accel_data)` columns and `r nrow(accel_data)` rows. Thus, there are `r nrow(accel_data)` observations. 
+
+```{r}
+accel_data %>%
+  group_by (week, day) %>%
+  summarise (
+  activity_total = sum(activity_counts)) %>%
+  arrange(desc(activity_total)) %>%
+  pivot_wider (
+    names_from = "day",
+    values_from = "activity_total")%>% 
+  select (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) %>% 
+  knitr::kable() 
+```
+mutate(
+  day = forcats::fct_relevel(day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) 
+
+I used group_by to make groupings explicit so that they can be included in subsequent operations. Then I used summarise to create a total activity variable for each day by aggregating across minutes via sum function. I used arrange to rank the activity_total from highest to lowest. I used knitr::kable to create a table in rmd file.
+
+ Are any trends apparent?
+
+```{r}
+accel_data %>%
+  ggplot(aes(x = activity, y = activity_counts, color = day)) + 
+  geom_line(alpha = 0.5) + 
+    labs( 
+    title = "24-hour activity time courses for each day",
+    x = "minute",
+    y = "day") 
+```
+I used ggplot to create a scatterplot to show the 24-hour activity time courses for each day. I used color = day to indicate day of the week. I used labs to add title, x-axis label, and y-axis label. 
+Describe in words any patterns or conclusions you can make based on this graph.
+
+# question3
+```{r}
+data("ny_noaa") 
+ny_noaadf = 
+ny_noaa %>%
+janitor::clean_names() %>% 
+  mutate (tmax = as.integer(tmax),
+          tmin = as.integer(tmin)) %>% 
+separate(date, into = c("year", "month", "day"), sep = "-") %>% 
+  mutate (
+      year = as.integer(year),
+      month = as.integer(month),
+      day = as.integer(day)) %>% 
+  mutate (
+    prcp = prcp/10,
+      tmax = tmax/10,
+        tmin = tmin/10)
+```
+I loaded ny_noaa dataset from the p8105.datasets library.
+This dataset contains variables such as `r names(ny_noaa)`. It contains `r ncol(ny_noaa)` columns and `r nrow(ny_noaa)` rows. Thus, there are `r nrow(ny_noaa)` observations. 
+
+missing data is an issue
+```{r}
+ny_noaadf %>% 
+  group_by(snow) %>% 
+    summarize(
+    n_obs = n()) %>% 
+arrange(desc(n_obs))
+```
+The most commonly observed values for snow is 0.
+
+
+```{r}
+ny_plot1 = 
+ny_noaadf %>%
+mutate(month = month.name[month]) %>% 
+filter(month %in% c("January","July")) %>% 
+group_by(id, year, month) %>% 
+summarize(
+average_max_temp = mean(tmax, na.rm = TRUE)) %>% 
+  ggplot(
+  aes(x = year, y = average_max_temp, color=average_max_temp, group=id)) +
+  geom_line(alpha = 0.5, size = .1) +
+  facet_grid(.~month)
+ny_plot1
+```
+Is there any observable / interpretable structure? Any outliers?
+```{r}
+ny_ploti =
+  ny_noaadf %>%
+  ggplot(
+  aes(x = tmin, y = tmax)) +
+  geom_line(alpha = 0.5, size = .1)
+ny_ploti
+```
+```{r}
+ny_plotii =
+  ny_noaadf %>%
+  filter(snow>0 & snow<100) %>% 
+  ggplot(aes(x = snow, fill = year)) +
+  geom_density(alpha = .4, adjust = .5, color = "blue")
+ny_plotii
+```
+
+
