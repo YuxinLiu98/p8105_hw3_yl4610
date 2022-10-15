@@ -153,7 +153,14 @@ separate(date, into = c("year", "month", "day"), sep = "-") %>%
 I loaded ny_noaa dataset from the p8105.datasets library.
 This dataset contains variables such as `r names(ny_noaa)`. It contains `r ncol(ny_noaa)` columns and `r nrow(ny_noaa)` rows. Thus, there are `r nrow(ny_noaa)` observations. 
 
-missing data is an issue
+prec: Precipitation has `r sum(is.na(ny_noaadf$prcp))` missing values
+snow: Snowfall has `r sum(is.na(ny_noaadf$snow))` missing values
+snwd: Snow depth variable has `r sum(is.na(ny_noaadf$snwd))` missing values
+tmin: Minimum temperature has `r sum(is.na(ny_noaadf$tmin))` missing values
+tmax: Maximum temperature has `r sum(is.na(ny_noaadf$tmax))` missing values
+  
+Missing data is a big issue here because we have a lot of them. 
+
 ```{r}
 ny_noaadf %>% 
   group_by(snow) %>% 
@@ -161,9 +168,9 @@ ny_noaadf %>%
     n_obs = n()) %>% 
 arrange(desc(n_obs))
 ```
-The most commonly observed values for snow is 0.
+The most commonly observed values for snow is 0 because it has 2008508 observations.
 
-
+Two-panel plot showing the average max temperature in January and in July in each station across years:
 ```{r}
 ny_plot1 = 
 ny_noaadf %>%
@@ -173,12 +180,15 @@ group_by(id, year, month) %>%
 summarize(
 average_max_temp = mean(tmax, na.rm = TRUE)) %>% 
   ggplot(
-  aes(x = year, y = average_max_temp, color=average_max_temp, group=id)) +
+  aes(x = year, y = average_max_temp, color=month, group=id)) +
   geom_line(alpha = 0.5, size = .1) +
   facet_grid(.~month)
 ny_plot1
 ```
 Is there any observable / interpretable structure? Any outliers?
+The average max temperature in January is lower than the average max temperature in July in each station across year. Also, the range of average max temperature in January is greater than that in July.
+
+Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year
 ```{r}
 ny_ploti =
   ny_noaadf %>%
@@ -187,6 +197,7 @@ ny_ploti =
   geom_line(alpha = 0.5, size = .1)
 ny_ploti
 ```
+
 ```{r}
 ny_plotii =
   ny_noaadf %>%
@@ -195,5 +206,6 @@ ny_plotii =
   geom_density(alpha = .4, adjust = .5, color = "blue")
 ny_plotii
 ```
+
 
 
