@@ -7,30 +7,84 @@ date: "2022-10-08"
 
 ```{r, message=FALSE}
 library(tidyverse)
+library(ggridges)
+library(patchwork)
+
 library(p8105.datasets)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
 ```
+
 # question 1 
 ```{r}
 data("instacart") 
 janitor::clean_names(instacart)
 ```
 
-I loaded the libraries and data from the p8105.datasets. Then I used janitor to clean the names. This dataset contains variables such as `r names(instacart)`. It contains `r ncol(instacart)` columns and `r nrow(instacart)` rows. 
+I loaded the libraries and data from the p8105.datasets. Then I used janitor to clean the names. This dataset contains variables such as `r names(instacart)`. It contains `r ncol(instacart)` columns and `r nrow(instacart)` rows, with each row representing a single product from an instacart order. 
 
+Variables include identifiers for user, order, and product; the order in which each product was added to the cart. There are several order-level variables, describing the day and time of the order, and number of days since prior order. Then there are several item-specific variables, describing the product name (e.g. Yogurt, Avocado), department (e.g. dairy and eggs, produce), and aisle (e.g. yogurt, fresh fruits), and whether the item has been ordered by this user in the past. In total, there are `r instacart %>% select(product_id) %>% distinct %>% count` products found in `r instacart %>% select(user_id, order_id) %>% distinct %>% count` orders from `r instacart %>% select(user_id) %>% distinct %>% count` distinct users.
+
+Below is a table summarizing the number of items ordered from aisle. In total, there are 134 aisles, with fresh vegetables and fresh fruits holding the most items ordered by far.
+```{r}
+instacart %>% 
+  count(aisle) %>% 
+  arrange(desc(n))
+```
+I used count to look at the number of aisles and then used arrange to arrange the number from largest to smallest.
+
+Next is a plot that shows the number of items ordered in each aisle. Here, aisles are ordered by ascending number of items.
+```{r}
+instacart %>% 
+  count(aisle) %>% 
+  filter(n > 10000) %>% 
+  mutate(aisle = fct_reorder(aisle, n)) %>% 
+  ggplot(aes(x = aisle, y = n)) + 
+  geom_point() + 
+  labs(title = "Number of items ordered in each aisle") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+```
+I used filter to limit this to aisles with more than 10000 items ordered.Then I used mutate and fct_reorder to arrange aisles sensibly and used ggplot to create the plot that shows the number of items ordered in each aisle.
+
+Our next table shows the three most popular items in aisles `baking ingredients`, `dog food care`, and `packaged vegetables fruits`, and includes the number of times each item is ordered in your table.
+```{r}
+instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>%
+  group_by(aisle) %>% 
+  count(product_name) %>% 
+  mutate(rank = min_rank(desc(n))) %>% 
+  filter(rank < 4) %>% 
+  arrange(desc(n)) %>%
+  knitr::kable()
+```
+I used filter to filter three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. I used count to include the number of times each item is ordered and used mutate to rank them in order. I used arrange to rank the value from highest to lowest.I used knitr::kable to create a table in rmd file.
+
+Finally is a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week. This table has been formatted in an untidy manner for human readers. Pink Lady Apples are generally purchased slightly earlier in the day than Coffee Ice Cream, with the exception of day 5.
 ```{r}
 instacart %>%
-  group_by(aisle) %>%
-  summarize(n_obs = n())%>%
-  arrange(desc(n_obs)) %>%
-  filter(n_obs > 10000) %>% 
-  ggplot(aes(x=aisle, y = n_obs)) + geom_point() 
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) %>%
+  group_by(product_name, order_dow) %>%
+  summarize(mean_hour = mean(order_hour_of_day)) %>%
+  spread(key = order_dow, value = mean_hour) %>%
+  knitr::kable(digits = 2)
 ```
-There are 134 aisles and fresh vegetables are the most items ordered from.
-I used group_by and summarize to look at the number of aisles and then used arrange to arrange the number from largest to smallest. I used filter to limit number of items to aisles with more than 10000 items ordered by. I used ggplot to make a scatterplot to show the number of items ordered in each aisle.
-  
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
-Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
-Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+I used filter to filter Pink Lady Apples and Coffee Ice Cream. I used group_by to group them by product_name and order_dow. Then I used summarize to calculate mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week. I used spread to format the table for human readers. Lastly, I used knitr::kable to create a table in rmd file.
 
 # question 2
 ```{r}
@@ -56,19 +110,15 @@ accel_data %>%
   group_by (week, day) %>%
   summarise (
   activity_total = sum(activity_counts)) %>%
-  arrange(desc(activity_total)) %>%
   pivot_wider (
     names_from = "day",
     values_from = "activity_total")%>% 
   select (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday) %>% 
   knitr::kable() 
 ```
-mutate(
-  day = forcats::fct_relevel(day, c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) 
+I used group_by to make groupings explicit so that they can be included in subsequent operations. Then I used summarise to create a total activity variable for each day by aggregating across minutes via sum function. Then, I used pivot_wider in order to better see the data and used select to reorder from Monday to Sunday. I used knitr::kable to create a table in rmd file.
 
-I used group_by to make groupings explicit so that they can be included in subsequent operations. Then I used summarise to create a total activity variable for each day by aggregating across minutes via sum function. I used arrange to rank the activity_total from highest to lowest. I used knitr::kable to create a table in rmd file.
-
- Are any trends apparent?
+This person had extreme low level of activities on Saturday at week 4 and week 5. Other than this, I do not think there are any apparent trends. 
 
 ```{r}
 accel_data %>%
@@ -77,10 +127,10 @@ accel_data %>%
     labs( 
     title = "24-hour activity time courses for each day",
     x = "minute",
-    y = "day") 
+    y = "day") +
+    geom_smooth(alpha = 0.5)
 ```
-I used ggplot to create a scatterplot to show the 24-hour activity time courses for each day. I used color = day to indicate day of the week. I used labs to add title, x-axis label, and y-axis label. 
-Describe in words any patterns or conclusions you can make based on this graph.
+Based on this graph, this 63 year-old male had a higher level of activities in weekdays compared to weekends.
 
 # question3
 ```{r}
