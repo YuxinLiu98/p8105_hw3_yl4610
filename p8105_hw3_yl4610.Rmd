@@ -118,19 +118,24 @@ accel_data %>%
 ```
 I used group_by to make groupings explicit so that they can be included in subsequent operations. Then I used summarise to create a total activity variable for each day by aggregating across minutes via sum function. Then, I used pivot_wider in order to better see the data and used select to reorder from Monday to Sunday. I used knitr::kable to create a table in rmd file.
 
-This person had extreme low level of activities on Saturday at week 4 and week 5. Other than this, I do not think there are any apparent trends. 
+This person had extreme low level of activities on Saturday at week 4 and week 5. Also, this person has relatively lower level of activities on week 1 Monday (<10,0000) comapred to other weekdays. Other than this, I do not think there are other apparent trends. 
 
 ```{r}
+accel_data_plot=
 accel_data %>%
   ggplot(aes(x = activity, y = activity_counts, color = day)) + 
   geom_line(alpha = 0.5) + 
-    labs( 
+  geom_smooth(se = FALSE)+
+  scale_x_discrete(
+    breaks = c(0, 240, 480, 720, 960,1200,1440), 
+    labels = c("12:00 A.M.","04:00 A.M.","8:00 A.M.","12:00 P.M.","04:00 P.M.","8:00 P.M.","12:00 P.M."))+
+  labs( 
     title = "24-hour activity time courses for each day",
     x = "minute",
     y = "day") +
     geom_smooth(alpha = 0.5)
 ```
-Based on this graph, this 63 year-old male had a higher level of activities in weekdays compared to weekends.
+Based on this graph, this 63 year-old male had a higher level of activities in weekdays compared to weekends generally. He has higher level of activities around 8 P.M., 12 P.M., and 4P.M. He has lower level of activities around 12 A.M. and 4 A.M.
 
 # question3
 ```{r}
@@ -142,17 +147,17 @@ janitor::clean_names() %>%
           tmin = as.integer(tmin)) %>% 
 separate(date, into = c("year", "month", "day"), sep = "-") %>% 
   mutate (
-      year = as.integer(year),
       month = as.integer(month),
       day = as.integer(day)) %>% 
   mutate (
     prcp = prcp/10,
-      tmax = tmax/10,
-        tmin = tmin/10)
+    tmax = tmax/10,
+    tmin = tmin/10)
 ```
 I loaded ny_noaa dataset from the p8105.datasets library.
 This dataset contains variables such as `r names(ny_noaa)`. It contains `r ncol(ny_noaa)` columns and `r nrow(ny_noaa)` rows. Thus, there are `r nrow(ny_noaa)` observations. 
 
+Precipitation, tmax, and tmin are divided by 10. 
 prec: Precipitation has `r sum(is.na(ny_noaadf$prcp))` missing values
 snow: Snowfall has `r sum(is.na(ny_noaadf$snow))` missing values
 snwd: Snow depth variable has `r sum(is.na(ny_noaadf$snwd))` missing values
@@ -168,10 +173,10 @@ ny_noaadf %>%
     n_obs = n()) %>% 
 arrange(desc(n_obs))
 ```
-The most commonly observed values for snow is 0 because it has 2008508 observations.
+The most commonly observed values for snow is 0 because it has 2008508 observations.Most of the time we do not have snow due to weather and seasons. 
 
 Two-panel plot showing the average max temperature in January and in July in each station across years:
-```{r}
+```{r, warning = FALSE}
 ny_plot1 = 
 ny_noaadf %>%
 mutate(month = month.name[month]) %>% 
@@ -180,32 +185,47 @@ group_by(id, year, month) %>%
 summarize(
 average_max_temp = mean(tmax, na.rm = TRUE)) %>% 
   ggplot(
-  aes(x = year, y = average_max_temp, color=month, group=id)) +
-  geom_line(alpha = 0.5, size = .1) +
+  aes(x = year, y = average_max_temp)) +
+  geom_point(alpha = 0.5, size = .1) +
+  geom_smooth(aes(group=month)) +
+      labs( 
+    title = "average max temperature in January and in July in each station across years",
+    x = "year",
+    y = "average_max_temp (C)")+
   facet_grid(.~month)
 ny_plot1
 ```
-Is there any observable / interpretable structure? Any outliers?
-The average max temperature in January is lower than the average max temperature in July in each station across year. Also, the range of average max temperature in January is greater than that in July.
+The average max temperature in January is lower than the average max temperature in July in each station across year. Also, the range of average max temperature in January is greater than that in July.Yes, there are outliers.
 
 Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year
-```{r}
+```{r, warning = FALSE}
 ny_ploti =
   ny_noaadf %>%
   ggplot(
   aes(x = tmin, y = tmax)) +
-  geom_line(alpha = 0.5, size = .1)
+  geom_smooth() +     
+labs( 
+    title = "tmax vs tmin",
+    x = "tmin (C)",
+    y = "tmax (C)")
 ny_ploti
 ```
+The distribution of the plot is not linear, but there exists a postive relationship between tmin and tmax. 
 
 ```{r}
 ny_plotii =
   ny_noaadf %>%
   filter(snow>0 & snow<100) %>% 
   ggplot(aes(x = snow, fill = year)) +
-  geom_density(alpha = .4, adjust = .5, color = "blue")
+  geom_density(alpha = .4, adjust = .5, color = "blue") +     
+labs( 
+    title = "distribution of snowfall separately by year")
 ny_plotii
 ```
+The distribution of snowfall are pretty similar each year after we only include 0<snow<100. 
 
-
+merge the two plots together to create a two-panel plot 
+```{r}
+ny_ploti + ny_plotii
+```
 
