@@ -134,6 +134,7 @@ accel_data %>%
     x = "minute",
     y = "day") +
     geom_smooth(alpha = 0.5)
+accel_data_plot
 ```
 Based on this graph, this 63 year-old male had a higher level of activities in weekdays compared to weekends generally. He has higher level of activities around 8 P.M., 12 P.M., and 4P.M. He has lower level of activities around 12 A.M. and 4 A.M.
 
